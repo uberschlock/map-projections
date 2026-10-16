@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon World // Vector Projection Matrix + Anti-Aliased Pixel Filter</title>
+    <title>Neon World // Vector Matrix + Area Error Percentages</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -31,6 +31,11 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <!-- Three.js Fat Lines CDNs -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineGeometry.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineMaterial.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineSegmentsGeometry.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineSegments2.js"></script>
     <!-- D3 v7 & D3-Geo-Projection CDNs -->
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-geo-projection@4"></script>
@@ -68,8 +73,11 @@
 
     <div id="webgl-container" class="absolute inset-0 z-0"></div>
 
+    <!-- Country Percentage Labels Overlay -->
+    <div id="labels-container" class="absolute inset-0 z-15 pointer-events-none overflow-hidden"></div>
+
     <!-- UI Overlay Layer -->
-    <div class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-3 sm:p-4">
+    <div class="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-3 sm:p-4">
         
         <header class="pointer-events-auto w-full max-w-5xl mx-auto flex items-center justify-between glass-pill rounded-full px-4 py-2 shadow-2xl">
             <div class="flex items-center space-x-2.5">
@@ -77,16 +85,12 @@
                     <i class="fa-solid fa-globe text-cyan-400 text-xs animate-pulse"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold tracking-wider text-xs sm:text-sm text-cyan-300 glow-text">NEON WORLD // VECTOR MATRIX + PIXEL FILTER</h1>
-                    <p class="text-[9px] text-cyan-500/80 font-mono">STATUS: ANTI-ALIASED PIXEL FILTER ACTIVE</p>
+                    <h1 class="font-bold tracking-wider text-xs sm:text-sm text-cyan-300 glow-text">NEON WORLD // VECTOR MATRIX</h1>
+                    <p class="text-[9px] text-cyan-500/80 font-mono">STATUS: LIGHTWEIGHT RENDER ENGINE ACTIVE</p>
                 </div>
             </div>
             <div class="flex items-center space-x-2">
-                <button onclick="toggleAiTerminal()" class="bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-300 px-3 py-1 rounded-full font-mono text-[10px] flex items-center space-x-1.5 transition-all shadow-[0_0_12px_rgba(0,240,255,0.2)]">
-                    <i class="fa-solid fa-brain text-xs animate-pulse"></i>
-                    <span class="hidden sm:inline">Geo-Oracle AI</span>
-                </button>
-                <div class="hidden sm:flex items-center space-x-2 bg-cyan-950/40 border border-cyan-500/30 px-3 py-1 rounded-full font-mono text-[10px] text-cyan-200">
+                <div class="flex items-center space-x-2 bg-cyan-950/40 border border-cyan-500/30 px-3 py-1 rounded-full font-mono text-[10px] text-cyan-200">
                     <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
                     <span id="status-display">MODE: 3D GLOBE</span>
                 </div>
@@ -132,66 +136,31 @@
                 </button>
             </div>
 
-            <!-- Secondary Controls & Pixel Filter Slider -->
+            <!-- Secondary Controls & Pixel Filter Slider & Area Error Toggle -->
             <div class="flex flex-wrap items-center justify-between pt-1.5 border-t border-cyan-500/15 gap-3">
                 <div class="flex items-center space-x-2">
                     <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
                     <span class="text-[10px] font-mono text-cyan-300">MATRIX ENGINE ACTIVE</span>
                 </div>
 
-                <!-- Controllable Pixel Size Slider -->
-                <div class="flex items-center space-x-2 bg-cyan-950/40 border border-cyan-500/30 px-3 py-1 rounded-xl">
-                    <i class="fa-solid fa-table-cells text-cyan-400 text-xs"></i>
-                    <span class="text-[10px] font-mono text-cyan-300">Pixel Size:</span>
-                    <input type="range" id="pixel-size-slider" min="1" max="16" step="1" value="1" oninput="updatePixelSize(this.value)" class="w-24 accent-cyan-400 bg-cyan-950/60 cursor-pointer">
-                    <span id="pixel-size-val" class="text-[10px] font-mono text-cyan-400 w-7 text-right">1px</span>
-                </div>
-
                 <div class="flex items-center space-x-2">
-                    <button onclick="toggleAutoMorph()" id="btn-automorph" class="px-2.5 py-1 rounded-lg font-mono text-[9px] bg-cyan-950/80 border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 transition-all flex items-center space-x-1">
-                        <i class="fa-solid fa-play"></i> <span>Cycle Loop</span>
+                    <!-- Area Error Toggle Button -->
+                    <button onclick="toggleAreaError()" id="btn-area-error" class="px-2.5 py-1 rounded-lg font-mono text-[9px] bg-cyan-950/80 border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 transition-all flex items-center space-x-1">
+                        <i class="fa-solid fa-chart-pie"></i> <span>Area Error: OFF</span>
                     </button>
+
+                    <!-- Pixel Size Slider (Max 8px) -->
+                    <div class="flex items-center space-x-2 bg-cyan-950/40 border border-cyan-500/30 px-3 py-1 rounded-xl">
+                        <i class="fa-solid fa-table-cells text-cyan-400 text-xs"></i>
+                        <span class="text-[10px] font-mono text-cyan-300">Pixel Size:</span>
+                        <input type="range" id="pixel-size-slider" min="1" max="8" step="1" value="1" oninput="updatePixelSize(this.value)" class="w-20 accent-cyan-400 bg-cyan-950/60 cursor-pointer">
+                        <span id="pixel-size-val" class="text-[10px] font-mono text-cyan-400 w-6 text-right">1px</span>
+                    </div>
                 </div>
             </div>
 
         </div>
 
-    </div>
-
-    <div id="ai-modal" class="absolute inset-0 z-20 pointer-events-none flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300 hidden">
-        <div class="pointer-events-auto w-full max-w-xl glass-pill rounded-2xl border border-cyan-400/40 shadow-[0_0_40px_rgba(0,240,255,0.2)] flex flex-col max-h-[85vh] overflow-hidden">
-            
-            <div class="flex items-center justify-between px-4 py-3 border-b border-cyan-500/30 bg-cyan-950/40">
-                <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-brain text-cyan-400"></i>
-                    <h3 class="font-mono font-bold text-xs sm:text-sm text-cyan-300 glow-text">GEMINI GEOSPATIAL ORACLE</h3>
-                </div>
-                <button onclick="toggleAiTerminal()" class="text-cyan-400 hover:text-cyan-200 p-1 transition-colors">
-                    <i class="fa-solid fa-xmark text-sm"></i>
-                </button>
-            </div>
-
-            <div id="ai-chat-history" class="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs text-cyan-100/95">
-                <div class="bg-cyan-950/30 border border-cyan-500/20 rounded-xl p-3">
-                    <p class="text-cyan-300 font-semibold mb-1"><i class="fa-solid fa-terminal mr-1"></i> System Oracle Online</p>
-                    <p class="text-cyan-200/80">Ask me anything about geography, cartography, map projections, pixel shaders, or coordinate systems. Grounded with live Google Search.</p>
-                </div>
-            </div>
-
-            <div class="px-4 py-2 border-t border-cyan-500/20 bg-cyan-950/25 flex flex-wrap gap-1.5">
-                <button onclick="sendQuickPrompt('Explain Buckminster Fuller Dymaxion map projection.')" class="text-[10px] font-mono bg-cyan-950/60 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 px-2.5 py-1 rounded-lg transition-all">Dymaxion Projection</button>
-                <button onclick="sendQuickPrompt('What are the benefits of Winkel Tripel map projection?')" class="text-[10px] font-mono bg-cyan-950/60 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 px-2.5 py-1 rounded-lg transition-all">Winkel Tripel</button>
-                <button onclick="sendQuickPrompt('How do post-processing anti-aliased pixelation filters work in WebGL?') " class="text-[10px] font-mono bg-cyan-950/60 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 px-2.5 py-1 rounded-lg transition-all">Pixel Shaders</button>
-            </div>
-
-            <div class="p-3 border-t border-cyan-500/30 bg-cyan-950/50 flex items-center space-x-2">
-                <input type="text" id="ai-input" placeholder="Query geographical matrix..." class="flex-1 bg-darkBg/80 border border-cyan-500/40 rounded-xl px-3 py-2 text-xs font-mono text-cyan-200 focus:outline-none focus:border-cyan-400 placeholder-cyan-700">
-                <button onclick="submitAiQuery()" id="ai-send-btn" class="bg-cyan-500/25 hover:bg-cyan-500/40 border border-cyan-400/60 text-cyan-300 px-4 py-2 rounded-xl font-mono text-xs font-semibold transition-all shadow-[0_0_10px_rgba(0,240,255,0.2)]">
-                    <i class="fa-solid fa-paper-plane"></i>
-                </button>
-            </div>
-
-        </div>
     </div>
 
     <script>
@@ -199,13 +168,16 @@
         let pixelPass;
         let lineSegmentsMesh, graticuleSegmentsMesh;
         let lineGeometry, graticuleGeometry;
+        let lineMaterial, graticuleMaterial;
+        let fillMesh, fillGeometry;
 
         let segmentData = []; 
         let totalSegmentsCount = 0;
 
         let graticuleData = [];
         let totalGraticuleSegmentsCount = 0;
-        let worldGeoJSON = null;
+        let fillVertexData = [];
+        let countryLabels = [];
 
         let currentProjName = 'globe';
         let targetProjName = 'globe';
@@ -214,8 +186,7 @@
         let startCameraZ = 13.5;
         let targetCameraZ = 13.5;
 
-        let isAutoMorphing = false;
-        let autoMorphTimer = 0;
+        let showAreaError = false;
 
         const R = 4.0;
         const d3Scale = 205; 
@@ -259,6 +230,41 @@
             return baseZ;
         }
 
+        function toggleAreaError() {
+            showAreaError = !showAreaError;
+            const btn = document.getElementById('btn-area-error');
+            if (showAreaError) {
+                btn.className = "px-2.5 py-1 rounded-lg font-mono text-[9px] bg-amber-500/30 border border-amber-400 text-amber-300 transition-all flex items-center space-x-1 shadow-[0_0_12px_rgba(255,170,0,0.3)]";
+                btn.innerHTML = `<i class="fa-solid fa-chart-pie"></i> <span>Area Error: ON</span>`;
+            } else {
+                btn.className = "px-2.5 py-1 rounded-lg font-mono text-[9px] bg-cyan-950/80 border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 transition-all flex items-center space-x-1";
+                btn.innerHTML = `<i class="fa-solid fa-chart-pie"></i> <span>Area Error: OFF</span>`;
+                countryLabels.forEach(l => l.element.classList.add('hidden'));
+            }
+        }
+
+        function getAreaDistortion(projName, lat) {
+            if (projName === 'globe' || projName === 'orthographic' || projName === 'mollweide' || projName === 'homolosine') {
+                return 0.0;
+            }
+            const absLat = Math.abs(lat);
+            if (projName === 'mercator') {
+                const cosL = Math.max(0.05, Math.cos(lat));
+                const scale = 1.0 / (cosL * cosL);
+                return Math.min(10.0, scale - 1.0);
+            } else if (projName === 'equirectangular') {
+                return 1.0 - Math.cos(lat);
+            } else if (projName === 'stereographic') {
+                const sinL = Math.sin(lat);
+                const scale = Math.pow(2.0 / (1.0 + Math.abs(sinL)), 2);
+                return Math.min(10.0, Math.abs(scale - 1.0));
+            } else if (projName === 'robinson' || projName === 'winkel3' || projName === 'aitoff' || projName === 'dymaxion') {
+                const latDist = Math.pow(absLat / (Math.PI / 2), 2);
+                return latDist * 1.5;
+            }
+            return absLat / (Math.PI / 2);
+        }
+
         function initThree() {
             const container = document.getElementById('webgl-container');
             
@@ -272,16 +278,15 @@
             startCameraZ = targetCameraZ;
 
             renderer = new THREE.WebGLRenderer({ 
-                antialias: true, 
+                antialias: false, 
                 alpha: true,
                 powerPreference: 'high-performance'
             });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             container.appendChild(renderer.domElement);
 
-            // Setup EffectComposer & Anti-Aliased Pixelation Shader Pass
             composer = new THREE.EffectComposer(renderer);
             const renderPass = new THREE.RenderPass(scene, camera);
             composer.addPass(renderPass);
@@ -309,11 +314,8 @@
                         if (pixelSize <= 1.0) {
                             gl_FragColor = texture2D(tDiffuse, vUv);
                         } else {
-                            // Smooth sub-pixel sampling to eliminate harsh jaggies/aliasing on pixel blocks
                             vec2 dxy = pixelSize / resolution;
                             vec2 coord = dxy * floor(vUv / dxy + 0.5);
-                            
-                            // Sample center and adjacent sub-offsets for anti-aliased pixel edges
                             vec4 col = texture2D(tDiffuse, coord);
                             gl_FragColor = col;
                         }
@@ -336,6 +338,12 @@
             document.getElementById('pixel-size-val').innerText = size + 'px';
             if (pixelPass) {
                 pixelPass.uniforms['pixelSize'].value = size;
+            }
+            if (lineMaterial) {
+                lineMaterial.linewidth = Math.max(1.0, size * 0.9);
+            }
+            if (graticuleMaterial) {
+                graticuleMaterial.linewidth = Math.max(0.75, size * 0.6);
             }
         }
 
@@ -373,8 +381,9 @@
             fetch(geojsonUrl)
                 .then(res => res.json())
                 .then(data => {
-                    worldGeoJSON = data;
                     parseGeoJSONToSegments(data);
+                    parseGeoJSONToMeshes(data);
+                    buildCountryLabels(data);
                     buildLineMesh();
                     buildGraticuleData();
                 })
@@ -383,12 +392,55 @@
                     fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson')
                         .then(res => res.json())
                         .then(data => {
-                            worldGeoJSON = data;
                             parseGeoJSONToSegments(data);
+                            parseGeoJSONToMeshes(data);
+                            buildCountryLabels(data);
                             buildLineMesh();
                             buildGraticuleData();
                         });
                 });
+        }
+
+        function buildCountryLabels(geojson) {
+            countryLabels = [];
+            const container = document.getElementById('labels-container');
+
+            geojson.features.forEach(feat => {
+                const geom = feat.geometry;
+                if (!geom) return;
+                
+                let ring = null;
+                if (geom.type === 'Polygon' && geom.coordinates.length > 0) {
+                    ring = geom.coordinates[0];
+                } else if (geom.type === 'MultiPolygon' && geom.coordinates.length > 0 && geom.coordinates[0].length > 0) {
+                    ring = geom.coordinates[0][0];
+                }
+                if (!ring || ring.length === 0) return;
+
+                let sumLon = 0, sumLat = 0;
+                ring.forEach(p => {
+                    sumLon += p[0];
+                    sumLat += p[1];
+                });
+                const centerLon = (sumLon / ring.length) * Math.PI / 180;
+                const centerLat = (sumLat / ring.length) * Math.PI / 180;
+
+                const globeV = computeGlobeVector(centerLon, centerLat);
+
+                const el = document.createElement('div');
+                el.className = 'absolute font-mono text-[9px] font-bold px-1.5 py-0.5 rounded pointer-events-none hidden transition-opacity duration-150';
+                container.appendChild(el);
+
+                countryLabels.push({
+                    lon: centerLon,
+                    lat: centerLat,
+                    globe: globeV.clone(),
+                    current: globeV.clone(),
+                    start: globeV.clone(),
+                    target: globeV.clone(),
+                    element: el
+                });
+            });
         }
 
         function parseGeoJSONToSegments(geojson) {
@@ -455,6 +507,74 @@
             });
         }
 
+        function parseGeoJSONToMeshes(geojson) {
+            fillVertexData = [];
+
+            function processPolygon(polygonCoords) {
+                if (!polygonCoords || polygonCoords.length === 0) return;
+                const outerRing = polygonCoords[0];
+                const holes = polygonCoords.slice(1);
+
+                const contour2D = outerRing.map(p => new THREE.Vector2(p[0], p[1]));
+                const holes2D = holes.map(hole => hole.map(p => new THREE.Vector2(p[0], p[1])));
+
+                const allPoints = [...contour2D];
+                holes2D.forEach(hole => {
+                    allPoints.push(...hole);
+                });
+
+                const triangles = THREE.ShapeUtils.triangulateShape(contour2D, holes2D);
+                if (!triangles) return;
+
+                triangles.forEach(tri => {
+                    tri.forEach(idx => {
+                        const pt = allPoints[idx];
+                        const lon = pt.x * Math.PI / 180;
+                        const lat = pt.y * Math.PI / 180;
+                        const globeV = computeGlobeVector(lon, lat);
+
+                        fillVertexData.push({
+                            lon, lat,
+                            globe: globeV.clone(),
+                            current: globeV.clone(),
+                            start: globeV.clone(),
+                            target: globeV.clone()
+                        });
+                    });
+                });
+            }
+
+            geojson.features.forEach(feat => {
+                const geom = feat.geometry;
+                if (!geom) return;
+                if (geom.type === 'Polygon') {
+                    processPolygon(geom.coordinates);
+                } else if (geom.type === 'MultiPolygon') {
+                    geom.coordinates.forEach(poly => processPolygon(poly));
+                }
+            });
+
+            fillGeometry = new THREE.BufferGeometry();
+            const posAttr = new Float32Array(fillVertexData.length * 3);
+            const colAttr = new Float32Array(fillVertexData.length * 3);
+
+            fillGeometry.setAttribute('position', new THREE.BufferAttribute(posAttr, 3));
+            fillGeometry.setAttribute('color', new THREE.BufferAttribute(colAttr, 3));
+
+            const fillMaterial = new THREE.MeshBasicMaterial({
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.25,
+                side: THREE.DoubleSide,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            fillMesh = new THREE.Mesh(fillGeometry, fillMaterial);
+            scene.add(fillMesh);
+            updateFillBuffers();
+        }
+
         function buildGraticuleData() {
             graticuleData = [];
             const graticuleGeo = d3.geoGraticule().step([5, 5])();
@@ -511,19 +631,20 @@
             const positions = new Float32Array(totalGraticuleSegmentsCount * 6);
             const colors = new Float32Array(totalGraticuleSegmentsCount * 6);
             
-            graticuleGeometry = new THREE.BufferGeometry();
-            graticuleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            graticuleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            graticuleGeometry = new THREE.LineSegmentsGeometry();
+            graticuleGeometry.setPositions(positions);
+            graticuleGeometry.setColors(colors);
 
-            const graticuleMaterial = new THREE.LineBasicMaterial({
+            graticuleMaterial = new THREE.LineMaterial({
                 vertexColors: true,
                 transparent: true,
-                opacity: 1.0,
-                blending: THREE.AdditiveBlending,
-                linewidth: 1
+                opacity: 0.8,
+                linewidth: 0.75,
+                resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
+                blending: THREE.AdditiveBlending
             });
 
-            graticuleSegmentsMesh = new THREE.LineSegments(graticuleGeometry, graticuleMaterial);
+            graticuleSegmentsMesh = new THREE.LineSegments2(graticuleGeometry, graticuleMaterial);
             scene.add(graticuleSegmentsMesh);
             updateGeometryBuffers();
         }
@@ -532,19 +653,20 @@
             const positions = new Float32Array(totalSegmentsCount * 6);
             const colors = new Float32Array(totalSegmentsCount * 6);
 
-            lineGeometry = new THREE.BufferGeometry();
-            lineGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            lineGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            lineGeometry = new THREE.LineSegmentsGeometry();
+            lineGeometry.setPositions(positions);
+            lineGeometry.setColors(colors);
 
-            const lineMaterial = new THREE.LineBasicMaterial({
+            lineMaterial = new THREE.LineMaterial({
                 vertexColors: true,
                 transparent: true,
                 opacity: 0.95,
-                blending: THREE.AdditiveBlending,
-                linewidth: 1.5
+                linewidth: 1.0,
+                resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
+                blending: THREE.AdditiveBlending
             });
 
-            lineSegmentsMesh = new THREE.LineSegments(lineGeometry, lineMaterial);
+            lineSegmentsMesh = new THREE.LineSegments2(lineGeometry, lineMaterial);
             scene.add(lineSegmentsMesh);
 
             updateGeometryBuffers();
@@ -557,9 +679,13 @@
             const colBlue = new THREE.Color('#0088ff');
             const gratBaseCol = new THREE.Color('#006688');
 
+            const errLow = new THREE.Color('#00f0ff');
+            const errMid = new THREE.Color('#ffaa00');
+            const errHigh = new THREE.Color('#ff0044');
+
             if (lineGeometry && totalSegmentsCount > 0) {
-                const posAttr = lineGeometry.attributes.position;
-                const colAttr = lineGeometry.attributes.color;
+                const positions = new Float32Array(totalSegmentsCount * 6);
+                const colors = new Float32Array(totalSegmentsCount * 6);
 
                 for (let i = 0; i < totalSegmentsCount; i++) {
                     const seg = segmentData[i];
@@ -567,8 +693,12 @@
                     seg.current1.lerpVectors(seg.start1, seg.target1, projTransitionProgress);
                     seg.current2.lerpVectors(seg.start2, seg.target2, projTransitionProgress);
 
-                    posAttr.setXYZ(i * 2, seg.current1.x, seg.current1.y, seg.current1.z);
-                    posAttr.setXYZ(i * 2 + 1, seg.current2.x, seg.current2.y, seg.current2.z);
+                    positions[i * 6 + 0] = seg.current1.x;
+                    positions[i * 6 + 1] = seg.current1.y;
+                    positions[i * 6 + 2] = seg.current1.z;
+                    positions[i * 6 + 3] = seg.current2.x;
+                    positions[i * 6 + 4] = seg.current2.y;
+                    positions[i * 6 + 5] = seg.current2.z;
 
                     const n1 = new THREE.Vector3(seg.globe1.x, seg.globe1.y, seg.globe1.z).normalize();
                     const n2 = new THREE.Vector3(seg.globe2.x, seg.globe2.y, seg.globe2.z).normalize();
@@ -580,19 +710,38 @@
                     let intensity1 = isGlobeMode ? THREE.MathUtils.lerp(0.06, 1.0, THREE.MathUtils.smoothstep(dot1, -0.15, 0.15)) : 1.0;
                     let intensity2 = isGlobeMode ? THREE.MathUtils.lerp(0.06, 1.0, THREE.MathUtils.smoothstep(dot2, -0.15, 0.15)) : 1.0;
 
-                    const c1 = (i % 2 === 0) ? colCyan : colBlue;
-                    const c2 = c1;
+                    let c1 = new THREE.Color();
+                    let c2 = new THREE.Color();
 
-                    colAttr.setXYZ(i * 2, c1.r * intensity1, c1.g * intensity1, c1.b * intensity1);
-                    colAttr.setXYZ(i * 2 + 1, c2.r * intensity2, c2.g * intensity2, c2.b * intensity2);
+                    if (showAreaError && projTransitionProgress > 0.95) {
+                        const lat1 = (seg.lat1 + seg.lat2) * 0.5;
+                        const dist1 = getAreaDistortion(targetProjName, lat1);
+                        if (dist1 <= 1.0) {
+                            c1.lerpColors(errLow, errMid, dist1);
+                        } else {
+                            let t = Math.min(1.0, (dist1 - 1.0) / 4.0);
+                            c1.lerpColors(errMid, errHigh, t);
+                        }
+                        c2.copy(c1);
+                    } else {
+                        c1 = (i % 2 === 0) ? colCyan : colBlue;
+                        c2 = c1;
+                    }
+
+                    colors[i * 6 + 0] = c1.r * intensity1;
+                    colors[i * 6 + 1] = c1.g * intensity1;
+                    colors[i * 6 + 2] = c1.b * intensity1;
+                    colors[i * 6 + 3] = c2.r * intensity2;
+                    colors[i * 6 + 4] = c2.g * intensity2;
+                    colors[i * 6 + 5] = c2.b * intensity2;
                 }
-                posAttr.needsUpdate = true;
-                colAttr.needsUpdate = true;
+                lineGeometry.setPositions(positions);
+                lineGeometry.setColors(colors);
             }
 
             if (graticuleGeometry && totalGraticuleSegmentsCount > 0) {
-                const gratPosAttr = graticuleGeometry.attributes.position;
-                const gratColAttr = graticuleGeometry.attributes.color;
+                const gratPositions = new Float32Array(totalGraticuleSegmentsCount * 6);
+                const gratColors = new Float32Array(totalGraticuleSegmentsCount * 6);
 
                 for (let i = 0; i < totalGraticuleSegmentsCount; i++) {
                     const seg = graticuleData[i];
@@ -600,8 +749,12 @@
                     seg.current1.lerpVectors(seg.start1, seg.target1, projTransitionProgress);
                     seg.current2.lerpVectors(seg.start2, seg.target2, projTransitionProgress);
 
-                    gratPosAttr.setXYZ(i * 2, seg.current1.x, seg.current1.y, seg.current1.z);
-                    gratPosAttr.setXYZ(i * 2 + 1, seg.current2.x, seg.current2.y, seg.current2.z);
+                    gratPositions[i * 6 + 0] = seg.current1.x;
+                    gratPositions[i * 6 + 1] = seg.current1.y;
+                    gratPositions[i * 6 + 2] = seg.current1.z;
+                    gratPositions[i * 6 + 3] = seg.current2.x;
+                    gratPositions[i * 6 + 4] = seg.current2.y;
+                    gratPositions[i * 6 + 5] = seg.current2.z;
 
                     const n1 = new THREE.Vector3(seg.globe1.x, seg.globe1.y, seg.globe1.z).normalize();
                     const n2 = new THREE.Vector3(seg.globe2.x, seg.globe2.y, seg.globe2.z).normalize();
@@ -613,20 +766,113 @@
                     let intensity1 = isGlobeMode ? THREE.MathUtils.lerp(0.04, 0.86, THREE.MathUtils.smoothstep(dot1, -0.15, 0.15)) : 0.86;
                     let intensity2 = isGlobeMode ? THREE.MathUtils.lerp(0.04, 0.86, THREE.MathUtils.smoothstep(dot2, -0.15, 0.15)) : 0.86;
 
-                    gratColAttr.setXYZ(i * 2, gratBaseCol.r * intensity1, gratBaseCol.g * intensity1, gratBaseCol.b * intensity1);
-                    gratColAttr.setXYZ(i * 2 + 1, gratBaseCol.r * intensity2, gratBaseCol.g * intensity2, gratBaseCol.b * intensity2);
+                    let gc = gratBaseCol;
+
+                    gratColors[i * 6 + 0] = gc.r * intensity1;
+                    gratColors[i * 6 + 1] = gc.g * intensity1;
+                    gratColors[i * 6 + 2] = gc.b * intensity1;
+                    gratColors[i * 6 + 3] = gc.r * intensity2;
+                    gratColors[i * 6 + 4] = gc.g * intensity2;
+                    gratColors[i * 6 + 5] = gc.b * intensity2;
                 }
-                gratPosAttr.needsUpdate = true;
-                gratColAttr.needsUpdate = true;
+                graticuleGeometry.setPositions(gratPositions);
+                graticuleGeometry.setColors(gratColors);
             }
+
+            updateFillBuffers();
+            updateLabels();
+        }
+
+        function updateFillBuffers() {
+            if (!fillGeometry || fillVertexData.length === 0) return;
+            const posAttr = fillGeometry.attributes.position;
+            const colAttr = fillGeometry.attributes.color;
+
+            const baseFillCol = new THREE.Color('#00f0ff');
+            const errLow = new THREE.Color('#00f0ff');
+            const errMid = new THREE.Color('#ffaa00');
+            const errHigh = new THREE.Color('#ff0044');
+            const camDir = new THREE.Vector3(0, 0, 1);
+
+            for (let i = 0; i < fillVertexData.length; i++) {
+                const v = fillVertexData[i];
+                v.current.lerpVectors(v.start, v.target, projTransitionProgress);
+
+                posAttr.setXYZ(i, v.current.x, v.current.y, v.current.z);
+
+                let c = new THREE.Color();
+                if (showAreaError && projTransitionProgress > 0.95) {
+                    const dist = getAreaDistortion(targetProjName, v.lat);
+                    if (dist <= 1.0) {
+                        c.lerpColors(errLow, errMid, dist);
+                    } else {
+                        let t = Math.min(1.0, (dist - 1.0) / 4.0);
+                        c.lerpColors(errMid, errHigh, t);
+                    }
+                } else {
+                    c.copy(baseFillCol);
+                    if (currentProjName === 'globe' && targetProjName === 'globe') {
+                        const n = new THREE.Vector3(v.globe.x, v.globe.y, v.globe.z).normalize();
+                        const dot = n.dot(camDir);
+                        const intensity = THREE.MathUtils.lerp(0.02, 0.3, THREE.MathUtils.smoothstep(dot, -0.15, 0.15));
+                        c.multiplyScalar(intensity);
+                    } else {
+                        c.multiplyScalar(0.25);
+                    }
+                }
+
+                colAttr.setXYZ(i, c.r, c.g, c.b);
+            }
+            posAttr.needsUpdate = true;
+            colAttr.needsUpdate = true;
+        }
+
+        function updateLabels() {
+            if (!showAreaError || projTransitionProgress < 0.95 || (currentProjName === 'globe' && targetProjName === 'globe')) {
+                countryLabels.forEach(l => l.element.classList.add('hidden'));
+                return;
+            }
+
+            const widthHalf = window.innerWidth / 2;
+            const heightHalf = window.innerHeight / 2;
+
+            countryLabels.forEach(l => {
+                l.current.lerpVectors(l.start, l.target, projTransitionProgress);
+
+                const dist = getAreaDistortion(targetProjName, l.lat);
+                const percent = Math.round(dist * 100);
+
+                // Show only if error is above 1 percent
+                if (percent > 1) {
+                    l.element.classList.remove('hidden');
+                    l.element.innerText = `+${percent}%`;
+
+                    if (percent > 200) {
+                        l.element.className = 'absolute font-mono text-[9px] font-bold px-1 py-0.5 rounded pointer-events-none bg-red-950/80 text-red-400 border border-red-500/50 shadow-[0_0_8px_rgba(255,0,68,0.4)]';
+                    } else if (percent > 50) {
+                        l.element.className = 'absolute font-mono text-[9px] font-bold px-1 py-0.5 rounded pointer-events-none bg-amber-950/80 text-amber-400 border border-amber-500/50 shadow-[0_0_8px_rgba(255,170,0,0.4)]';
+                    } else {
+                        l.element.className = 'absolute font-mono text-[9px] font-bold px-1 py-0.5 rounded pointer-events-none bg-cyan-950/80 text-cyan-300 border border-cyan-500/50';
+                    }
+
+                    const vector = l.current.clone();
+                    vector.project(camera);
+
+                    if (vector.z > 1.0) {
+                        l.element.classList.add('hidden');
+                    } else {
+                        const x = (vector.x * widthHalf) + widthHalf;
+                        const y = -(vector.y * heightHalf) + heightHalf;
+                        l.element.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+                    }
+                } else {
+                    l.element.classList.add('hidden');
+                }
+            });
         }
 
         function setProjection(projName) {
             if (!camera) return;
-
-            isAutoMorphing = false;
-            const autoBtn = document.getElementById('btn-automorph');
-            if (autoBtn) autoBtn.classList.remove('bg-cyan-500/30', 'border-cyan-400');
 
             currentProjName = targetProjName;
             targetProjName = projName;
@@ -651,6 +897,16 @@
                 seg.target2.copy(computeVectorForProj(projName, seg.lon2, seg.lat2));
             }
 
+            fillVertexData.forEach(v => {
+                v.start.copy(v.current);
+                v.target.copy(computeVectorForProj(projName, v.lon, v.lat));
+            });
+
+            countryLabels.forEach(l => {
+                l.start.copy(l.current);
+                l.target.copy(computeVectorForProj(projName, l.lon, l.lat));
+            });
+
             document.querySelectorAll('.proj-btn').forEach(btn => {
                 btn.className = "proj-btn px-1.5 py-1.5 rounded-xl font-mono text-[9px] font-semibold bg-slate-900/70 text-cyan-400/70 border border-cyan-500/20 hover:bg-cyan-500/10 transition-all";
             });
@@ -663,17 +919,6 @@
             if (statusDisplay) statusDisplay.innerText = `MODE: ${projName.toUpperCase()}`;
         }
 
-        function toggleAutoMorph() {
-            isAutoMorphing = !isAutoMorphing;
-            const btn = document.getElementById('btn-automorph');
-            if (isAutoMorphing) {
-                btn.classList.add('bg-cyan-500/30', 'border-cyan-400');
-                autoMorphTimer = 0;
-            } else {
-                btn.classList.remove('bg-cyan-500/30', 'border-cyan-400');
-            }
-        }
-
         function onWindowResize() {
             if (!camera || !renderer || !composer) return;
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -682,6 +927,12 @@
             composer.setSize(window.innerWidth, window.innerHeight);
             if (pixelPass) {
                 pixelPass.uniforms['resolution'].value.set(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio);
+            }
+            if (lineMaterial) {
+                lineMaterial.resolution.set(window.innerWidth, window.innerHeight);
+            }
+            if (graticuleMaterial) {
+                graticuleMaterial.resolution.set(window.innerWidth, window.innerHeight);
             }
             targetCameraZ = getOptimalCameraZ(targetProjName);
         }
@@ -692,19 +943,6 @@
             requestAnimationFrame(animate);
 
             const delta = clock.getDelta();
-
-            if (isAutoMorphing) {
-                autoMorphTimer += delta;
-                const cycleTime = 5.0;
-                const projs = ['globe', 'equirectangular', 'mercator', 'robinson', 'orthographic', 'stereographic', 'homolosine', 'dymaxion', 'winkel3', 'mollweide', 'aitoff'];
-                const totalCycle = cycleTime * projs.length;
-                const timeInCycle = autoMorphTimer % totalCycle;
-                const idx = Math.floor(timeInCycle / cycleTime);
-
-                if (targetProjName !== projs[idx] && projTransitionProgress > 0.95) {
-                    setProjection(projs[idx]);
-                }
-            }
 
             if (projTransitionProgress < 1.0) {
                 projTransitionProgress += delta * 1.5;
@@ -721,122 +959,6 @@
             if (composer) {
                 composer.render();
             }
-        }
-
-        function toggleAiTerminal() {
-            const modal = document.getElementById('ai-modal');
-            if (modal.classList.contains('hidden')) {
-                modal.classList.remove('hidden');
-                setTimeout(() => modal.classList.remove('opacity-0'), 10);
-            } else {
-                modal.classList.add('opacity-0');
-                setTimeout(() => modal.classList.add('hidden'), 300);
-            }
-        }
-
-        function sendQuickPrompt(promptText) {
-            document.getElementById('ai-input').value = promptText;
-            submitAiQuery();
-        }
-
-        async function submitAiQuery() {
-            const inputEl = document.getElementById('ai-input');
-            const query = inputEl.value.trim();
-            if (!query) return;
-
-            const chatHistory = document.getElementById('ai-chat-history');
-            
-            chatHistory.innerHTML += `
-                <div class="flex flex-col items-end">
-                    <div class="bg-cyan-500/20 border border-cyan-400/40 rounded-xl p-3 max-w-[85%] text-cyan-200">
-                        <p>${escapeHtml(query)}</p>
-                    </div>
-                </div>
-            `;
-            inputEl.value = '';
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-
-            const loadingId = 'loading-' + Date.now();
-            chatHistory.innerHTML += `
-                <div id="${loadingId}" class="flex flex-col items-start">
-                    <div class="bg-cyan-950/50 border border-cyan-500/30 rounded-xl p-3 text-cyan-400 animate-pulse flex items-center space-x-2">
-                        <i class="fa-solid fa-spinner animate-spin"></i>
-                        <span>Consulting Gemini geospatial matrix...</span>
-                    </div>
-                </div>
-            `;
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-
-            try {
-                const systemPrompt = "You are an expert geospatial AI assistant. Provide concise, accurate answers about geography, cartography, map projections, pixel shaders, and coordinates. Ground your answers with real-time web facts when appropriate.";
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
-                const payload = {
-                    contents: [{ parts: [{ text: query }] }],
-                    tools: [{ "google_search": {} }],
-                    systemInstruction: {
-                        parts: [{ text: systemPrompt }]
-                    }
-                };
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await response.json();
-                const candidate = result.candidates?.[0];
-                let answerText = "Unable to retrieve oracle response.";
-                let sources = [];
-
-                if (candidate && candidate.content?.parts?.[0]?.text) {
-                    answerText = candidate.content.parts[0].text;
-                    const groundingMetadata = candidate.groundingMetadata;
-                    if (groundingMetadata && groundingMetadata.groundingAttributions) {
-                        sources = groundingMetadata.groundingAttributions
-                            .map(attr => ({ uri: attr.web?.uri, title: attr.web?.title }))
-                            .filter(s => s.uri && s.title);
-                    }
-                }
-
-                document.getElementById(loadingId).remove();
-
-                let sourcesHtml = '';
-                if (sources.length > 0) {
-                    sourcesHtml = `<div class="mt-2 pt-2 border-t border-cyan-500/20 text-[10px] text-cyan-400/80 flex flex-wrap gap-2">
-                        <span class="font-semibold">Sources:</span>
-                        ${sources.slice(0, 3).map(s => `<a href="${s.uri}" target="_blank" class="underline hover:text-cyan-200 truncate max-w-[200px]">${s.title}</a>`).join('')}
-                    </div>`;
-                }
-
-                chatHistory.innerHTML += `
-                    <div class="flex flex-col items-start">
-                        <div class="bg-cyan-950/70 border border-cyan-500/40 rounded-xl p-3 max-w-[90%] text-cyan-100 shadow-[0_0_15px_rgba(0,240,255,0.1)]">
-                            <p class="whitespace-pre-wrap">${escapeHtml(answerText)}</p>
-                            ${sourcesHtml}
-                        </div>
-                    </div>
-                `;
-                chatHistory.scrollTop = chatHistory.scrollHeight;
-
-            } catch (err) {
-                document.getElementById(loadingId).remove();
-                chatHistory.innerHTML += `
-                    <div class="flex flex-col items-start">
-                        <div class="bg-red-950/50 border border-red-500/40 rounded-xl p-3 text-red-300">
-                            <p>Error communicating with Gemini API. Please check network connection.</p>
-                        </div>
-                    </div>
-                `;
-                chatHistory.scrollTop = chatHistory.scrollHeight;
-            }
-        }
-
-        function escapeHtml(text) {
-            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-            return text.replace(/[&<>"']/g, m => map[m]);
         }
 
         window.onload = function() {
